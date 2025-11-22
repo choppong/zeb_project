@@ -313,9 +313,10 @@ with tab3:
                    "→ step4_binary.py에서 사용한 최종 입력 컬럼 목록에 맞게 use_map / region_map / 주거용 여부 / 인증구분을 점검해주세요."
                    )
                    st.exception(e)
-              return
+                   return
 
        
+
 
 
 
