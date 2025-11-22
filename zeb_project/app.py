@@ -300,21 +300,22 @@ with tab3:
                 input_df = pd.DataFrame([data])[feature_names]
 
                 # 8) 예측 수행
-                    try:
-        pred = model.predict(input_df)[0]
-        if hasattr(model, 'predict_proba'):
-            proba = model.predict_proba(input_df)[0][1]
-        else:
-            proba = None
-    except Exception as e:
-        st.error(
-            "모델 예측 중 오류가 발생했습니다.\n\n"
-            "→ 여전히 feature 이름/구성이 맞지 않을 수 있습니다.\n"
-            "→ step4_binary.py에서 사용한 최종 입력 컬럼 목록에 맞게 use_map / region_map / 주거용 여부 / 인증구분을 점검해주세요."
-        )
-        st.exception(e)
-        return
+                try:
+                    pred = model.predict(input_df)[0]
+                    if hasattr(model, 'predict_proba'):
+                       proba = model.predict_proba(input_df)[0][1]
+                    else:
+                       proba = None
+               except Exception as e:
+                    st.error(
+                   "모델 예측 중 오류가 발생했습니다.\n\n"
+                   "→ 여전히 feature 이름/구성이 맞지 않을 수 있습니다.\n"
+                   "→ step4_binary.py에서 사용한 최종 입력 컬럼 목록에 맞게 use_map / region_map / 주거용 여부 / 인증구분을 점검해주세요."
+                   )
+                   st.exception(e)
+              return
 
        
+
 
 
