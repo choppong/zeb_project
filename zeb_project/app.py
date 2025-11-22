@@ -1,8 +1,7 @@
 import streamlit as st
 import pandas as pd
 from pathlib import Path
-import joblib  # 🔹 추가
-
+import joblib
 
 # -----------------------------
 # 데이터 불러오기 (캐싱)
@@ -14,23 +13,31 @@ def load_data():
         try:
             df = pd.read_csv(data_path)
         except UnicodeDecodeError:
-            # 인코딩 문제 있을 경우 대비
             df = pd.read_csv(data_path, encoding="cp949")
         return df
-    else:
-        return None
-        @st.cache_resource
-def load_model():
-    model_path = Path("model_binary.pkl")
-    if model_path.exists():
-        model = joblib.load(model_path)
-        return model
     else:
         return None
 
 
 # -----------------------------
-# 앱 화면 구성
+# 모델 불러오기 (캐싱)
+# -----------------------------
+@st.cache_resource
+def load_model():
+    model_path = Path("model_binary.pkl")
+    if model_path.exists():
+        try:
+            model = joblib.load(model_path)
+            return model
+        except Exception as e:
+            print("모델 로드 오류:", e)
+            return None
+    else:
+        return None
+
+
+# -----------------------------
+# 페이지 설정
 # -----------------------------
 st.set_page_config(
     page_title="ZEB 인증등급 예측 졸업작품",
@@ -49,8 +56,10 @@ st.markdown(
     """
 )
 
-tab1, tab2, tab3 = st.tabs(["📊 데이터 살펴보기", "🧪 연구/모델 설명", "🤖 예측하기 데모"])
-
+# 탭 구성: 데이터 / 설명 / 예측
+tab1, tab2, tab3 = st.tabs(
+    ["📊 데이터 살펴보기", "🧪 연구/모델 설명", "🤖 예측하기 데모"]
+)
 
 # ---------------------------------
 # 탭 1: 데이터 살펴보기
@@ -71,6 +80,7 @@ with tab1:
         with st.expander("전체 데이터 간단 통계 보기"):
             st.write(df.describe(include="all"))
 
+
 # ---------------------------------
 # 탭 2: 연구/모델 설명
 # ---------------------------------
@@ -85,7 +95,7 @@ with tab2:
 
         - **데이터 구성**  
           · 제로에너지건축물 인증 대상 건물들의 설계/운영 정보를 정리한 데이터셋 활용  
-          · 에너지성능지표, 설비특성, 외피성능 등 여러 인자를 포함  
+          · 건물 용도, 지역, 연면적, 주거/비주거, 인증 구분 등 다양한 인자를 포함  
 
         - **모델 개요**  
           · Python 기반 머신러닝 기법 활용  
@@ -100,10 +110,9 @@ with tab2:
         이 페이지는 데모 버전으로,  
         **졸업작품 발표 및 판넬 관람객에게 연구 내용을 소개하는 용도**로 제작되었습니다.  
 
-        추후에는 다음 기능을 추가할 수 있습니다.
-        - 사용자가 직접 건물 조건(지역, 용도, 외피성능 등)을 입력하고  
-          → 예상 ZEB 인증 등급을 확인하는 인터랙티브 예측 기능
-        - 다양한 시나리오별 에너지 절감 효과 비교
+        추후에는 다음 기능을 추가/개선할 수 있습니다.
+        - 더 많은 입력 항목(외피 성능, 설비 시스템 등)을 반영한 상세 예측
+        - 다양한 시나리오별 에너지 절감 효과 및 등급 변화 분석
         """
     )
 
@@ -113,12 +122,15 @@ with tab2:
     )
 
 
+# ---------------------------------
+# 탭 3: 예측하기 데모
+# ---------------------------------
 with tab3:
     st.subheader("제로에너지건축물 인증 등급 예측 데모")
 
     model = load_model()
     if model is None:
-        st.error("`model_binary.pkl` 파일을 찾을 수 없습니다. GitHub 레포에 모델 파일이 있는지 확인해 주세요.")
+        st.error("`model_binary.pkl` 파일을 찾을 수 없거나, 로드 중 오류가 발생했습니다.")
     else:
         st.markdown(
             """
@@ -130,66 +142,89 @@ with tab3:
 
         col1, col2 = st.columns(2)
 
-        # 🔹 왼쪽: 건축물 기본 정보
+        # ------------------------------
+        # 왼쪽: 건축물 기본 정보
+        # ------------------------------
         with col1:
             bld_name = st.text_input("건축물명", value="예) 신세종빛드림본부 종합사무실")
+
             cert_type = st.selectbox("인증 구분", ["본인증", "예비인증"])
+
             res_type = st.selectbox("주거용 / 주거용 이외", ["주거용", "주거용 이외"])
 
-        # 🔹 오른쪽: 용도/지역/면적
-        with col2:
             bld_use = st.selectbox(
                 "건물 용도",
                 [
-                    "업무시설",
-                    "교육연구시설",
-                    "제1종근린생활시설",
-                    "제2종근린생활시설",
-                    "문화및집회시설",
+                    "단독주택",
+                    "공동주택",
+                    "제1종 근린생활시설",
+                    "제2종 근린생활시설",
+                    "문화 및 집회시설",
+                    "종교시설",
                     "판매시설",
+                    "운수시설",
+                    "의료시설",
+                    "교육연구시설",
+                    "노유자시설",
+                    "수련시설",
+                    "운동시설",
+                    "업무시설",
                     "숙박시설",
                     "위락시설",
                     "공장",
-                    "창고시설",
-                    "운수시설",
-                    "의료시설",
-                    "노유자시설",
-                    "수련시설",
-                    "위험물저장및처리시설",
-                    "자동차관련시설",
-                    "기타"
-                ]  # ← 실제 17개 목록으로 수정해도 돼
+                ],
             )
 
-            region = st.selectbox("지역", ["수도권", "충청권", "호남권", "영남권", "강원·제주", "기타"])
-            area = st.number_input("연면적 (m²)", min_value=50.0, max_value=300000.0, value=5000.0, step=50.0)
+        # ------------------------------
+        # 오른쪽: 지역 / 면적
+        # ------------------------------
+        with col2:
+            region = st.selectbox(
+                "지역",
+                [
+                    "서울",
+                    "부산",
+                    "대구",
+                    "인천",
+                    "광주",
+                    "대전",
+                    "울산",
+                    "세종",
+                    "경기",
+                    "강원",
+                    "충북",
+                    "충남",
+                    "전북",
+                    "전남",
+                    "경북",
+                    "경남",
+                    "제주",
+                ],
+            )
+
+            area = st.number_input(
+                "연면적 (m²)",
+                min_value=50.0,
+                max_value=300000.0,
+                value=5000.0,
+                step=50.0,
+            )
 
         st.markdown("---")
 
+        # ------------------------------
+        # 예측 버튼
+        # ------------------------------
         if st.button("✨ 예측하기"):
-            # 🔻 실제 학습에 사용했던 컬럼 이름/전처리 방식에 맞게 수정해야 하는 부분!
+            # ⚠️ 여기 만드는 input_df의 컬럼 이름/구성은
+            # 초이가 모델 학습할 때 사용한 특성과 다르면 에러가 날 수 있음!
+            # 지금은 '원시 입력값' 위주로 구성해두고, 모델 구조에 맞게 나중에 수정 가능하도록 함.
             input_dict = {
-                # 예시) 인증 구분 더미 변수
-                "인증_본인증": 1 if cert_type == "본인증" else 0,
-                "인증_예비인증": 1 if cert_type == "예비인증" else 0,
-
-                # 예시) 주거/비주거 더미
+                "건축물명": bld_name,              # 실제 모델에서는 사용 안 할 수도 있음
+                "인증구분": cert_type,
                 "주거용여부": 1 if res_type == "주거용" else 0,
-
-                # 예시) 용도 더미 (실제 학습 컬럼명에 맞게 바꿔야 함)
-                "용도_업무시설": 1 if bld_use == "업무시설" else 0,
-                "용도_교육연구시설": 1 if bld_use == "교육연구시설" else 0,
-                "용도_제1종근린생활시설": 1 if bld_use == "제1종근린생활시설" else 0,
-                # ... 나머지 용도도 같은 패턴으로 추가
-
-                # 예시) 지역 더미
-                "지역_수도권": 1 if region == "수도권" else 0,
-                "지역_충청권": 1 if region == "충청권" else 0,
-                "지역_호남권": 1 if region == "호남권" else 0,
-                "지역_영남권": 1 if region == "영남권" else 0,
-                "지역_강원제주": 1 if region == "강원·제주" else 0,
-
-                # 연속형 변수
+                "건물용도": bld_use,
+                "지역": region,
                 "연면적": area,
             }
 
@@ -202,7 +237,11 @@ with tab3:
                 else:
                     proba = None
             except Exception as e:
-                st.error("모델 예측 중 오류가 발생했습니다. 피처 이름/개수, 더미 변수 구성을 확인해 주세요.")
+                st.error(
+                    "모델 예측 중 오류가 발생했습니다.\n\n"
+                    "→ 원인: 학습에 사용한 피처(컬럼) 이름/개수와 현재 input_df가 다를 가능성이 큽니다.\n"
+                    "→ 해결: step4_binary.py에서 사용한 최종 입력 컬럼 목록에 맞게 app.py의 input_dict 키를 수정해 주세요."
+                )
                 st.exception(e)
             else:
                 st.success(f"이 건축물의 예측 결과: **{pred}**")
