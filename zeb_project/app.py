@@ -296,29 +296,45 @@ with tab3:
                 if region_col and region_col in data:
                     data[region_col] = 1
 
-                # 7) DataFrame으로 변환 (컬럼 순서까지 model에 맞게)
-                input_df = pd.DataFrame([data])[feature_names]
+                   # 7) DataFrame으로 변환 (컬럼 순서까지 model에 맞게)
+    input_df = pd.DataFrame([data])[feature_names]
 
-                # 8) 예측 수행
-                 try:
-                    pred = model.predict(input_df)[0]
+    # 8) 예측 수행 (심플 버전 – 에러 처리 없이 바로 예측)
+    pred = model.predict(input_df)[0]
 
-                    if hasattr(model, 'predict_proba'):
-                        proba = model.predict_proba(input_df)[0][1]
-                    else:
-                        proba = None
+    # 확률값(있으면) 계산
+    proba = None
+    if hasattr(model, "predict_proba"):
+        proba = model.predict_proba(input_df)[0][1]
 
-                except Exception as e:
-                    st.error(
-                        "모델 예측 중 오류가 발생했습니다.\n\n"
-                        "➜ 여전히 feature 이름/구성이 맞지 않을 수 있습니다.\n"
-                        "➜ step4_binary.py에서 사용한 최종 입력 컬럼 목록에 맞게 "
-                        "use_map / region_map / 주거용 여부 / … 다시 확인해주세요.\n"
-                        )
-                    st.exception(e)
-                    return
+    # 9) 0/1 예측값을 사람이 이해하기 쉬운 등급 표현으로 변환
+    try:
+        pred_int = int(pred)
+    except Exception:
+        pred_int = pred
+
+    if pred_int == 1:
+        grade_text = "1~3등급 (예상 상위 등급)"
+    elif pred_int == 0:
+        grade_text = "4·5등급 (예상 하위 등급)"
+    else:
+        grade_text = f"모델 원시 예측값: {pred}"
+
+    # 10) 화면에 출력
+    st.success(f"이 건축물의 예측 결과: **{grade_text}**")
+
+    if proba is not None:
+        st.write(
+            f"해당 결과(1~3등급일 확률, 양성 클래스 기준): **{proba:.1%}**"
+        )
+
+    st.caption(
+        "※ 예측 결과는 연구/발표용 참고값입니다. 실제 인증과는 차이가 있을 수 있습니다."
+    )
+
 
        
+
 
 
 
