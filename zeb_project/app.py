@@ -213,44 +213,113 @@ with tab3:
                 step=50.0,
             )
 
-        st.markdown("---")
+            st.markdown("---")
 
         # ------------------------------
         # 예측 버튼
         # ------------------------------
         if st.button("✨ 예측하기"):
-            # ⚠️ 여기 만드는 input_df의 컬럼 이름/구성은
-            # 초이가 모델 학습할 때 사용한 특성과 다르면 에러가 날 수 있음!
-            # 지금은 '원시 입력값' 위주로 구성해두고, 모델 구조에 맞게 나중에 수정 가능하도록 함.
-            input_dict = {
-                "건축물명": bld_name,              # 실제 모델에서는 사용 안 할 수도 있음
-                "인증구분": cert_type,
-                "주거용여부": 1 if res_type == "주거용" else 0,
-                "건물용도": bld_use,
-                "지역": region,
-                "연면적": area,
-            }
 
-            input_df = pd.DataFrame([input_dict])
-
-            try:
-                pred = model.predict(input_df)[0]
-                if hasattr(model, "predict_proba"):
-                    proba = model.predict_proba(input_df)[0][1]
-                else:
-                    proba = None
-            except Exception as e:
-                st.error(
-                    "모델 예측 중 오류가 발생했습니다.\n\n"
-                    "→ 원인: 학습에 사용한 피처(컬럼) 이름/개수와 현재 input_df가 다를 가능성이 큽니다.\n"
-                    "→ 해결: step4_binary.py에서 사용한 최종 입력 컬럼 목록에 맞게 app.py의 input_dict 키를 수정해 주세요."
-                )
-                st.exception(e)
+            # 1) 모델이 학습할 때 사용한 feature 이름 목록 가져오기
+            if not hasattr(model, "feature_names_in_"):
+                st.error("모델에 feature_names_in_ 정보가 없어 예측을 수행할 수 없습니다.")
             else:
-                st.success(f"이 건축물의 예측 결과: **{pred}**")
+                feature_names = list(model.feature_names_in_)
+                # 먼저 모든 피처를 0으로 초기화
+                data = {f: 0 for f in feature_names}
 
-                if proba is not None:
-                    st.write(f"해당 결과일 확률(양성 클래스 기준): **{proba:.1%}**")
+                # 2) 연속형 변수 채우기
+                if "연면적" in data:
+                    data["연면적"] = area
 
-                st.caption("※ 예측 결과는 연구/발표용 참고값입니다. 실제 인증과는 차이가 있을 수 있습니다.")
+                # 3) 인증 구분 (본인증 / 예비인증)
+                if cert_type == "본인증":
+                    if "인증구분_본인증" in data:
+                        data["인증구분_본인증"] = 1
+                elif cert_type == "예비인증":
+                    if "인증구분_예비인증" in data:
+                        data["인증구분_예비인증"] = 1
 
+                # 4) 주거용 / 주거용 이외
+                if res_type == "주거용":
+                    if "건물구분_주거용" in data:
+                        data["건물구분_주거용"] = 1
+                elif res_type == "주거용 이외":
+                    if "건물구분_주거용 이외" in data:
+                        data["건물구분_주거용 이외"] = 1
+
+                # 5) 건물 용도 17개 → one-hot
+                use_map = {
+                    "단독주택": "건물용도_단독주택",
+                    "공동주택": "건물용도_공동주택",
+                    "제1종 근린생활시설": "건물용도_제1종 근린생활시설",
+                    "제2종 근린생활시설": "건물용도_제2종 근린생활시설",
+                    "문화 및 집회시설": "건물용도_문화 및 집회시설",
+                    "종교시설": "건물용도_종교시설",
+                    "판매시설": "건물용도_판매시설",
+                    "운수시설": "건물용도_운수시설",
+                    "의료시설": "건물용도_의료시설",
+                    "교육연구시설": "건물용도_교육연구시설",
+                    "노유자시설": "건물용도_노유자시설",
+                    "수련시설": "건물용도_수련시설",
+                    "운동시설": "건물용도_운동시설",
+                    "업무시설": "건물용도_업무시설",
+                    "숙박시설": "건물용도_숙박시설",
+                    "위락시설": "건물용도_위락시설",
+                    "공장": "건물용도_공장",
+                }
+                use_col = use_map.get(bld_use)
+                if use_col and use_col in data:
+                    data[use_col] = 1
+
+                # 6) 지역 17개 → one-hot
+                region_map = {
+                    "서울": "지역_서울",
+                    "부산": "지역_부산",
+                    "대구": "지역_대구",
+                    "인천": "지역_인천",
+                    "광주": "지역_광주",
+                    "대전": "지역_대전",
+                    "울산": "지역_울산",
+                    "세종": "지역_세종",
+                    "경기": "지역_경기",
+                    "강원": "지역_강원",
+                    "충북": "지역_충북",
+                    "충남": "지역_충남",
+                    "전북": "지역_전북",
+                    "전남": "지역_전남",
+                    "경북": "지역_경북",
+                    "경남": "지역_경남",
+                    "제주": "지역_제주",
+                }
+                region_col = region_map.get(region)
+                if region_col and region_col in data:
+                    data[region_col] = 1
+
+                # 7) DataFrame으로 변환 (컬럼 순서까지 model에 맞게)
+                input_df = pd.DataFrame([data])[feature_names]
+
+                # 8) 예측 수행
+                try:
+                    pred = model.predict(input_df)[0]
+                    if hasattr(model, "predict_proba"):
+                        proba = model.predict_proba(input_df)[0][1]
+                    else:
+                        proba = None
+                except Exception as e:
+                    st.error(
+                        "모델 예측 중 오류가 발생했습니다.\n\n"
+                        "→ 여전히 feature 이름/구성이 맞지 않을 수 있습니다.\n"
+                        "→ step4_binary.py에서 사용한 최종 입력 컬럼 목록에 맞게 use_map / region_map / 구분 컬럼명을 조정해 주세요."
+                    )
+                    st.exception(e)
+                else:
+                    st.success(f"이 건축물의 예측 결과: **{pred}**")
+
+                    if proba is not None:
+                        st.write(f"해당 결과일 확률(양성 클래스 기준): **{proba:.1%}**")
+
+                    st.caption("※ 예측 결과는 연구/발표용 참고값입니다. 실제 인증과는 차이가 있을 수 있습니다.")
+
+
+       
