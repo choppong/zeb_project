@@ -313,13 +313,29 @@ with tab3:
                         "→ step4_binary.py에서 사용한 최종 입력 컬럼 목록에 맞게 use_map / region_map / 구분 컬럼명을 조정해 주세요."
                     )
                     st.exception(e)
-                else:
-                    st.success(f"이 건축물의 예측 결과: **{pred}**")
+                   else:
+        # 0/1 예측값을 사람이 이해하기 쉬운 등급 표현으로 변환
+        # 가정: 1 = 1~3등급(상대적으로 우수), 0 = 4·5등급(상대적으로 낮음)
+        try:
+            pred_int = int(pred)
+        except Exception:
+            pred_int = pred
 
-                    if proba is not None:
-                        st.write(f"해당 결과일 확률(양성 클래스 기준): **{proba:.1%}**")
+        if pred_int == 1:
+            grade_text = "1~3등급 (예상 상위 등급)"
+        elif pred_int == 0:
+            grade_text = "4·5등급 (예상 하위 등급)"
+        else:
+            # 혹시 모를 이상값 대비
+            grade_text = f"모델 원시 예측값: {pred}"
 
-                    st.caption("※ 예측 결과는 연구/발표용 참고값입니다. 실제 인증과는 차이가 있을 수 있습니다.")
+        st.success(f"이 건축물의 예측 결과: **{grade_text}**")
+
+        if proba is not None:
+            st.write(f"해당 결과(1~3등급일 확률, 양성 클래스 기준): **{proba:.1%}**")
+
+        st.caption("※ 예측 결과는 연구/발표용 참고값입니다. 실제 인증과는 차이가 있을 수 있습니다.")
 
 
        
+
