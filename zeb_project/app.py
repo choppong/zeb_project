@@ -3,12 +3,14 @@ import pandas as pd
 from pathlib import Path
 import joblib
 
+BASE_DIR = Path(__file__).resolve().parent  # 🔸 app.py가 있는 폴더 경로
+
 # -----------------------------
 # 데이터 불러오기 (캐싱)
 # -----------------------------
 @st.cache_data
 def load_data():
-    data_path = Path("data") / "zeb_clean.csv"
+    data_path = BASE_DIR / "data" / "zeb_clean.csv"   # 🔸 app.py 기준으로 찾기
     if data_path.exists():
         try:
             df = pd.read_csv(data_path)
@@ -24,7 +26,7 @@ def load_data():
 # -----------------------------
 @st.cache_resource
 def load_model():
-    model_path = Path("model_binary.pkl")
+    model_path = BASE_DIR / "model_binary.pkl"   # 🔸 app.py 옆에 있는 파일
     if model_path.exists():
         try:
             model = joblib.load(model_path)
@@ -34,6 +36,7 @@ def load_model():
             return None
     else:
         return None
+
 
 
 # -----------------------------
@@ -250,3 +253,4 @@ with tab3:
                     st.write(f"해당 결과일 확률(양성 클래스 기준): **{proba:.1%}**")
 
                 st.caption("※ 예측 결과는 연구/발표용 참고값입니다. 실제 인증과는 차이가 있을 수 있습니다.")
+
