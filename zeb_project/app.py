@@ -297,8 +297,7 @@ with tab3:
                     data[region_col] = 1
 
                    # 7) DataFrame으로 변환 (컬럼 순서까지 model에 맞게)
-    input_df = pd.DataFrame([data])[feature_names]
-
+  
     # 8) 예측 수행 (심플 버전 – 에러 처리 없이 바로 예측)
     pred = model.predict(input_df)[0]
 
@@ -334,6 +333,7 @@ with tab3:
 
 
        
+
 
 
 
